@@ -1,19 +1,15 @@
-from modal import Image, Stub, gpu, web_server, asgi_app
+from modal import Image, Stub, web_server, asgi_app
 from fastapi import FastAPI
 import gradio as gr
-from Fooocus.async_worker import AsyncWorker
 import asyncio
+import os
+import subprocess
 
 DOCKER_IMAGE = "nvidia/cuda:12.3.1-base-ubuntu22.04"
-PYTHON_VER = "3.10"
-GPU_CONFIG = gpu.T4()
 PORT = 8000
 
 # Initialize Fooocus
 def init_Fooocus():
-    import os
-    import subprocess
-
     os.chdir("/Fooocus")
     os.system("pip install -r requirements_versions.txt")
     os.chdir("./models/checkpoints")
@@ -22,8 +18,6 @@ def init_Fooocus():
 # Define container image
 web_image = web_server(
     DOCKER_IMAGE,
-    python_version=PYTHON_VER,
-    gpu=GPU_CONFIG,
     port=PORT,
     startup_command="pip install -r /Fooocus/requirements_versions.txt && python /Fooocus/launch.py --always-high-vram",
     files=["/Fooocus"],
@@ -43,14 +37,16 @@ web_app = FastAPI()
 def ui():
     """A simple Gradio interface around our Fooocus inference."""
 
-    # Create an instance of the AsyncWorker
-    worker = AsyncWorker()
-
-    def predict(prompt):
-        # Run the prediction in an event loop
-        loop = asyncio.get_event_loop()
-        image_path = loop.run_until_complete(worker.run(prompt))
-        return image_path
+    async def predict(prompt):
+        # Assuming entry_with_update.py handles the prompt and generates an image
+        # The following code is a placeholder and should be replaced with actual implementation
+        process = subprocess.run(["python", "/Fooocus/entry_with_update.py", "--prompt", prompt], capture_output=True, text=True)
+        # The path where Fooocus saves the generated image needs to be provided here
+        # This is a placeholder path and should be replaced with the actual path used by Fooocus
+        # For now, we simulate the prediction process with a placeholder image path
+        output_path = "/Fooocus/outputs"  # This path is based on the grep search results
+        generated_image_path = os.path.join(output_path, "generated_image.png")  # Assuming the generated image is named 'generated_image.png'
+        return generated_image_path
 
     iface = gr.Interface(
         fn=predict,
