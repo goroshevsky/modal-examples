@@ -6,7 +6,8 @@
 
 # Basic setup
 
-from modal import Image, Stub, gpu, web_server
+from modal import Image, Stub, gpu, web_server, asgi_app
+from fastapi import FastAPI
 
 DOCKER_IMAGE = "nvidia/cuda:12.3.1-base-ubuntu22.04"
 PYTHON_VER = "3.10"
@@ -53,6 +54,9 @@ image = (
     .run_function(init_Fooocus, gpu=GPU_CONFIG)
 )
 
+# Define web interface image
+web_image = Image.debian_slim().pip_install("gradio", "fastapi", "uvicorn")
+
 # Run Fooocus
 
 stub = Stub("Fooocus", image=image)
@@ -75,3 +79,29 @@ def run():
             "--always-high-vram"
         ]
     )
+
+# Define the web app
+web_app = FastAPI()
+
+@app.function(image=web_image, keep_warm=1, container_idle_timeout=60 * 20)
+@asgi_app()
+def ui():
+    """A simple Gradio interface around our Fooocus inference."""
+    import gradio as gr
+
+    def predict(prompt):
+        # This function will call the Fooocus model and return the image.
+        # Placeholder for actual Fooocus model prediction logic.
+        pass
+
+    iface = gr.Interface(
+        fn=predict,
+        inputs=gr.Textbox(label="Enter your prompt"),
+        outputs=gr.Image(label="Generated Image"),
+        title="Fooocus Image Generation",
+        description="Enter a prompt to generate an image.",
+        theme="default"
+    )
+
+    from gradio.routes import mount_gradio_app
+    return mount_gradio_app(app=web_app, blocks=iface, path="/")
