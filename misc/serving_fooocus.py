@@ -83,7 +83,7 @@ def run():
 # Define the web app
 web_app = FastAPI()
 
-@app.function(image=web_image, keep_warm=1, container_idle_timeout=60 * 20)
+@stub.function(image=web_image, keep_warm=1, container_idle_timeout=60 * 20)
 @asgi_app()
 def ui():
     """A simple Gradio interface around our Fooocus inference."""
