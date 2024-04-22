@@ -17,8 +17,7 @@ def init_Fooocus():
 
 # Define container image
 web_image = web_server(
-    DOCKER_IMAGE,
-    startup_script=init_Fooocus,
+    DOCKER_IMAGE
 )
 
 stub = Stub()
