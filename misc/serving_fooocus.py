@@ -1,4 +1,4 @@
-from modal import Image, Stub, web_server, asgi_app
+from modal import Image, Stub, web_server, asgi_app, App
 from fastapi import FastAPI
 import gradio as gr
 import asyncio
@@ -23,7 +23,10 @@ stub = Stub()
 # Define the web app
 web_app = FastAPI()
 
-@stub.function(image=web_image, keep_warm=1, container_idle_timeout=60 * 20)
+# Define the app with a name
+app = App("fooocus-ui")
+
+@app.function(image=web_image, keep_warm=1, container_idle_timeout=60 * 20)
 def ui():
     """A simple Gradio interface around our Fooocus inference."""
 
