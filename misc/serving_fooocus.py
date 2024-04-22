@@ -18,7 +18,6 @@ def init_Fooocus():
 # Define container image
 web_image = web_server(
     DOCKER_IMAGE,
-    files=["/Fooocus"],
     python_packages=["fastapi", "uvicorn", "gradio"],
     apt_packages=["wget"],
     requirements_file="/Fooocus/requirements_versions.txt",
