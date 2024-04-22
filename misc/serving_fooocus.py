@@ -18,7 +18,6 @@ def init_Fooocus():
 # Define container image
 web_image = web_server(
     DOCKER_IMAGE,
-    port=PORT,
     startup_command="pip install -r /Fooocus/requirements_versions.txt && python /Fooocus/launch.py --always-high-vram",
     files=["/Fooocus"],
     python_packages=["fastapi", "uvicorn", "gradio"],
