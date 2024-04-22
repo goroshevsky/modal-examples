@@ -17,6 +17,7 @@ def init_Fooocus():
 
 # Define container image
 web_image = web_server(
+    PORT,
     DOCKER_IMAGE
 )
 
