@@ -16,7 +16,8 @@ def init_Fooocus():
     subprocess.run("wget -O juggernautXL_v8Rundiffusion.safetensors 'https://huggingface.co/lllyasviel/fav_models/resolve/main/fav/juggernautXL_v8Rundiffusion.safetensors'", shell=True)
 
 # Define container image using the static factory method from_registry
-web_image = Image.from_registry(DOCKER_IMAGE)
+# The base image is now a Python image that includes Python pre-installed
+web_image = Image.debian_slim(python_version="3.8").pip_install(["gradio", "fastapi", "uvicorn"])
 
 stub = Stub()
 
