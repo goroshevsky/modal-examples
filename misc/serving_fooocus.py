@@ -15,8 +15,8 @@ def init_Fooocus():
     os.chdir("./models/checkpoints")
     subprocess.run("wget -O juggernautXL_v8Rundiffusion.safetensors 'https://huggingface.co/lllyasviel/fav_models/resolve/main/fav/juggernautXL_v8Rundiffusion.safetensors'", shell=True)
 
-# Define container image
-web_image = Image(DOCKER_IMAGE)
+# Define container image using the static factory method from_registry
+web_image = Image.from_registry(DOCKER_IMAGE)
 
 stub = Stub()
 
