@@ -39,8 +39,17 @@ def ui():
         # This is a placeholder path and should be replaced with the actual path used by Fooocus
         # For now, we simulate the prediction process with a placeholder image path
         output_path = "/Fooocus/outputs"  # This path is based on the grep search results
-        generated_image_path = os.path.join(output_path, "generated_image.png")  # Assuming the generated image is named 'generated_image.png'
-        return generated_image_path
+        # Check if the output directory exists and contains the generated image
+        if os.path.isdir(output_path):
+            # Assuming the generated image is named after the prompt with spaces replaced by underscores and in PNG format
+            generated_image_name = prompt.replace(" ", "_") + ".png"
+            generated_image_path = os.path.join(output_path, generated_image_name)
+            if os.path.isfile(generated_image_path):
+                return generated_image_path
+            else:
+                raise FileNotFoundError(f"Generated image not found: {generated_image_path}")
+        else:
+            raise FileNotFoundError(f"Output directory not found: {output_path}")
 
     iface = gr.Interface(
         fn=predict,
