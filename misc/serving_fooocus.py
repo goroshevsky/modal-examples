@@ -16,9 +16,7 @@ def init_Fooocus():
     subprocess.run("wget -O juggernautXL_v8Rundiffusion.safetensors 'https://huggingface.co/lllyasviel/fav_models/resolve/main/fav/juggernautXL_v8Rundiffusion.safetensors'", shell=True)
 
 # Define container image
-web_image = web_server(
-    PORT
-)
+web_image = Image(DOCKER_IMAGE)
 
 stub = Stub()
 
