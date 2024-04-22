@@ -34,7 +34,10 @@ def ui():
     async def predict(prompt):
         # Assuming entry_with_update.py handles the prompt and generates an image
         # The following code is a placeholder and should be replaced with actual implementation
-        process = subprocess.run(["python", "/Fooocus/entry_with_update.py", "--prompt", prompt], capture_output=True, text=True)
+        process = await asyncio.create_subprocess_exec("python", "/Fooocus/entry_with_update.py", "--prompt", prompt, cwd="/Fooocus", stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = await process.communicate()
+        if stderr:
+            raise Exception(f"Error in image generation: {stderr.decode()}")
         # The path where Fooocus saves the generated image needs to be provided here
         # This is a placeholder path and should be replaced with the actual path used by Fooocus
         # For now, we simulate the prediction process with a placeholder image path
