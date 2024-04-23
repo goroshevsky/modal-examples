@@ -35,6 +35,8 @@ def ui():
         # The following code is a placeholder and should be replaced with actual implementation
         try:
             output = subprocess.check_output(["python", "/Fooocus/entry_with_update.py", "--prompt", prompt], cwd="/Fooocus")
+            # Decode output to string to ensure serialization
+            output_str = output.decode('utf-8').strip()
         except subprocess.CalledProcessError as e:
             raise Exception(f"Error in image generation: {e.stderr.decode()}")
 
