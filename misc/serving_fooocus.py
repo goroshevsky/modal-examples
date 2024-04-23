@@ -48,6 +48,7 @@ def ui():
             generated_image_name = prompt.replace(" ", "_") + ".png"
             generated_image_path = os.path.join(output_path, generated_image_name)
             if os.path.isfile(generated_image_path):
+                # Return the file path of the generated image
                 return generated_image_path
             else:
                 raise FileNotFoundError(f"Generated image not found: {generated_image_path}")
