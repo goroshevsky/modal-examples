@@ -33,9 +33,11 @@ def ui():
     def predict(prompt):
         # Assuming entry_with_update.py handles the prompt and generates an image
         # The following code is a placeholder and should be replaced with actual implementation
-        process = subprocess.run(["python", "/Fooocus/entry_with_update.py", "--prompt", prompt], cwd="/Fooocus", stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        if process.stderr:
-            raise Exception(f"Error in image generation: {process.stderr.decode()}")
+        try:
+            output = subprocess.check_output(["python", "/Fooocus/entry_with_update.py", "--prompt", prompt], cwd="/Fooocus")
+        except subprocess.CalledProcessError as e:
+            raise Exception(f"Error in image generation: {e.stderr.decode()}")
+
         # The path where Fooocus saves the generated image needs to be provided here
         # This is a placeholder path and should be replaced with the actual path used by Fooocus
         # For now, we simulate the prediction process with a placeholder image path
