@@ -3,6 +3,7 @@ from fastapi import FastAPI
 import gradio as gr
 import os
 import subprocess
+import base64
 
 DOCKER_IMAGE = "nvidia/cuda:12.3.1-base-ubuntu22.04"
 PORT = 8000
@@ -48,8 +49,10 @@ def ui():
             generated_image_name = prompt.replace(" ", "_") + ".png"
             generated_image_path = os.path.join(output_path, generated_image_name)
             if os.path.isfile(generated_image_path):
-                # Return the file path of the generated image
-                return generated_image_path
+                # Encode the image to base64 and return it
+                with open(generated_image_path, "rb") as image_file:
+                    encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+                return encoded_string
             else:
                 raise FileNotFoundError(f"Generated image not found: {generated_image_path}")
         else:
@@ -58,7 +61,7 @@ def ui():
     iface = gr.Interface(
         fn=predict,
         inputs=gr.Textbox(label="Enter your prompt"),
-        outputs=gr.Image(label="Generated Image"),
+        outputs=gr.Image(label="Generated Image", type="base64"),
         title="Fooocus Image Generation",
         description="Enter a prompt to generate an image.",
         theme="default"
