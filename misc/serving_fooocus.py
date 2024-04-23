@@ -50,7 +50,8 @@ def ui():
         outputs=gr.Image(label="Generated Image", type="filepath"),
         title="Fooocus Image Generation",
         description="Enter a prompt to generate an image.",
-        theme="default"
+        theme="default",
+        analytics_enabled=False  # Disable analytics to prevent background threads
     )
 
     from gradio.routes import mount_gradio_app
