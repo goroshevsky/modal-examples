@@ -2,9 +2,10 @@ import json
 import os
 from dataclasses import dataclass
 from itertools import product
+from pathlib import Path
 
 import pandas as pd
-from helpers.data import format_dataset, score_prediction
+from helpers import format_dataset, score_prediction
 from modal import Image, Stub, Volume, gpu
 from sklearn.metrics import (
     accuracy_score,
@@ -35,17 +36,13 @@ MIN_LEARNING_RATE = 1e-5
 MAX_LEARNING_RATE = 1e-3
 MAX_EPOCHS = 8
 
-JOURNAL_VOLUME = Volume.from_name(
-    "modal-optimization-log", create_if_missing=True
-)
-JOURNAL_PATH = "/root/cache"
-STUDY_NAME = "optuna-optimization"
-
 # DATASET CONFIG
+VOLUME = Volume.from_name("finetune-quora", create_if_missing=True)
+VOLUME_ROOT = Path("/data")
 DATASET_NAME = "567-labs/cleaned-quora-dataset-train-test-split"
-DATASET_DIR = "/data"
-DATASET_VOLUME = Volume.from_name("modal-optimization", create_if_missing=True)
-CACHE_DIRECTORY = f"{DATASET_DIR}/cached-embeddings"
+DATASET_PATH = VOLUME_ROOT / "quora-dataset"
+JOURNAL_PATH = VOLUME_ROOT / "log"
+
 TEST_SET_SIZE = 10000
 
 # Eval Configuration
@@ -56,7 +53,7 @@ METRICS = {
     "AUC": roc_auc_score,
 }
 
-stub = Stub("modal-optimization")
+stub = Stub("finetune-quora")
 
 
 def download_model():
@@ -72,23 +69,22 @@ image = (
         "sentence-transformers", "torch", "datasets", "optuna", "pandas"
     )
     .run_function(download_model)
+    .apt_install("procps")
 )
 
 
-@stub.function(image=image, volumes={DATASET_DIR: DATASET_VOLUME})
+@stub.function(image=image, volumes={VOLUME_ROOT: VOLUME})
 def download_dataset():
     from datasets import load_dataset
 
-    dataset_path = f"{DATASET_DIR}/{DATASET_NAME}"
-
-    if os.path.exists(dataset_path):
+    if os.path.exists(DATASET_PATH):
         print("Dataset Exists")
         return
 
     dataset = load_dataset(DATASET_NAME)
 
-    dataset.save_to_disk(dataset_path)
-    DATASET_VOLUME.commit()
+    dataset.save_to_disk(DATASET_PATH)
+    VOLUME.commit()
 
 
 @dataclass
@@ -107,10 +103,9 @@ class ModelConfig:
 @stub.function(
     image=image,
     gpu=gpu_config,
-    volumes={DATASET_DIR: DATASET_VOLUME, "/root/cache": JOURNAL_VOLUME},
-    concurrency_limit=50,
-    allow_concurrent_inputs=True,
-    timeout=86400,
+    volumes={VOLUME_ROOT: VOLUME},
+    # concurrency_limit=50,
+    timeout=2 * 60 * 60,
 )
 def objective(
     config: ModelConfig,
@@ -175,7 +170,7 @@ def objective(
     )
 
     # Load the dataset
-    dataset = load_from_disk(f"{DATASET_DIR}/{DATASET_NAME}")
+    dataset = load_from_disk(DATASET_PATH)
     train_dataset = dataset["train"].select(range(dataset_size))
     test_dataset = dataset["test"].select(range(TEST_SET_SIZE))
 
