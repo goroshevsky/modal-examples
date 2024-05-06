@@ -1,5 +1,6 @@
 import json
 import os
+import time
 from dataclasses import dataclass
 from itertools import product
 from pathlib import Path
@@ -27,9 +28,9 @@ MODELS = [
 SCHEDULER = [
     "warmuplinear",
 ]
-DATASET_SIZE = [0, 100, 1000, 10_000]
+DATASET_SIZE = [100, 1000, 10_000]
 WARMUP_STEPS = [1500]
-DENSE_OUT_FEATURES = [64, 128, 256, 512]
+DENSE_OUT_FEATURES = [64, 512]
 BATCH_SIZE = [32]
 MODEL_SAVE_PATH = "/output"
 MIN_LEARNING_RATE = 1e-5
@@ -83,7 +84,7 @@ def download_dataset():
 
     dataset = load_dataset(DATASET_NAME)
 
-    dataset.save_to_disk(DATASET_PATH)
+    dataset.save_to_disk(DATASET_PATH.as_posix())
     VOLUME.commit()
 
 
@@ -104,7 +105,7 @@ class ModelConfig:
     image=image,
     gpu=gpu_config,
     volumes={VOLUME_ROOT: VOLUME},
-    # concurrency_limit=50,
+    # concurrency_limit=1,
     timeout=2 * 60 * 60,
 )
 def objective(
@@ -135,9 +136,12 @@ def objective(
 
     print(f"Training model {model_name} {config}")
     model_slug = model_name.replace("/", "-")
-    journal_file_name = f"{JOURNAL_PATH}/{model_slug}_{dataset_size}_{dense_out_features}_{freeze_embedding_model}_{batch_size}_{num_epochs}.json"
+    journal_file_name = (
+        JOURNAL_PATH
+        / f"{model_slug}_{dataset_size}_{dense_out_features}_{freeze_embedding_model}_{batch_size}_{num_epochs}.json"
+    )
 
-    if os.path.exists(journal_file_name):
+    if journal_file_name.exists():
         with open(journal_file_name, "r") as f:
             return json.load(f)
 
@@ -170,10 +174,11 @@ def objective(
     )
 
     # Load the dataset
-    dataset = load_from_disk(DATASET_PATH)
+    dataset = load_from_disk(DATASET_PATH.as_posix())
     train_dataset = dataset["train"].select(range(dataset_size))
     test_dataset = dataset["test"].select(range(TEST_SET_SIZE))
 
+    # if num_sa
     # Format the dataset
     train_examples, test_examples = (
         format_dataset(train_dataset),
@@ -224,6 +229,7 @@ def objective(
 
     print(json.dumps(eval_results, indent=2))
 
+    journal_file_name.parent.mkdir(parents=True, exist_ok=True)
     with open(journal_file_name, "w") as f:
         json.dump(eval_results, f)
 
@@ -252,21 +258,8 @@ def generate_configs():
 
 @stub.local_entrypoint()
 def main():
-    import time
+    results = list(objective.map(generate_configs(), order_outputs=True))
 
+    df = pd.DataFrame(results).sort_values("metric_accuracy", ascending=False)
     date = time.strftime("%Y-%m-%d-%H-%M")
-
-    results = []
-
-    for experiment_result in objective.map(
-        generate_configs(), order_outputs=True, return_exceptions=True
-    ):
-        if isinstance(experiment_result, Exception):
-            print(f"Encountered Exception of {experiment_result}")
-            continue
-        results.append(experiment_result)
-        # This is to ensure that the results are not lost if the job is interrupted
-        df = pd.DataFrame(results).sort_values(
-            "metric_accuracy", ascending=False
-        )
-        df.to_csv(f"./paramsearch/{date}_plain_trial_results.csv", index=False)
+    df.to_csv(f"./paramsearch/{date}_plain_trial_results.csv", index=False)

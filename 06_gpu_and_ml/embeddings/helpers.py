@@ -137,4 +137,5 @@ def score_prediction(model, train_dataset, test_dataset):
     # # We then calculate the loss by fitting a custom LR
     lr = LogisticRegression()
     lr.fit(np.array(train_preds).reshape(-1, 1), train_labels)
+
     return lr.predict(np.array(test_preds).reshape(-1, 1)), test_labels
