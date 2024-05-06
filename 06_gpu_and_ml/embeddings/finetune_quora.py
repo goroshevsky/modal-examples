@@ -1,6 +1,5 @@
 import json
 import os
-import time
 from dataclasses import dataclass
 from itertools import product
 from pathlib import Path
@@ -92,13 +91,14 @@ def download_dataset():
 class ModelConfig:
     model_name: str
     dataset_size: int
-    dense_out_features: int
-    learning_rate: float
-    scheduler: str
-    warmup_steps: int
-    freeze_embedding_model: bool
-    batch_size: int
-    num_epochs: int
+    dense_out_features: int = 64
+    freeze_embedding_model: bool = True
+    learning_rate: float = 1e-4
+    batch_size: int = 32
+    warmup_steps: int = 500
+    scheduler: str = "warmuplinear"
+    num_epochs: int = 8
+    train: bool = True
 
 
 @stub.function(
@@ -140,10 +140,13 @@ def objective(
         JOURNAL_PATH
         / f"{model_slug}_{dataset_size}_{dense_out_features}_{freeze_embedding_model}_{batch_size}_{num_epochs}.json"
     )
+    print(journal_file_name)
 
     if journal_file_name.exists():
         with open(journal_file_name, "r") as f:
             return json.load(f)
+    # with open(journal_file_name, "w") as f:
+    #     return json.load(f)
 
     # Load the model
     embedding_model = SentenceTransformer(model_name)
@@ -178,36 +181,40 @@ def objective(
     train_dataset = dataset["train"].select(range(dataset_size))
     test_dataset = dataset["test"].select(range(TEST_SET_SIZE))
 
-    # if num_sa
-    # Format the dataset
-    train_examples, test_examples = (
-        format_dataset(train_dataset),
-        format_dataset(test_dataset),
-    )
+    if config.train:
+        # Format the dataset
+        train_examples, test_examples = (
+            format_dataset(train_dataset),
+            format_dataset(test_dataset),
+        )
 
-    # Create dataloaders and evaluator
-    train_dataloader = DataLoader(
-        train_examples, shuffle=True, batch_size=batch_size
-    )
-    evaluator = evaluation.BinaryClassificationEvaluator.from_input_examples(
-        test_examples, batch_size=batch_size
-    )
-    train_loss = losses.OnlineContrastiveLoss(model)
+        # Create dataloaders and evaluator
+        train_dataloader = DataLoader(
+            train_examples, shuffle=True, batch_size=batch_size
+        )
+        evaluator = (
+            evaluation.BinaryClassificationEvaluator.from_input_examples(
+                test_examples, batch_size=batch_size
+            )
+        )
+        train_loss = losses.OnlineContrastiveLoss(model)
 
-    # Train the model
-    model.fit(
-        train_objectives=[(train_dataloader, train_loss)],
-        evaluator=evaluator,
-        warmup_steps=warmup_steps,
-        scheduler=scheduler,
-        optimizer_params={"lr": learning_rate},
-        save_best_model=True,
-        epochs=num_epochs,
-        output_path=MODEL_SAVE_PATH,
-    )
+        # Train the model
+        model.fit(
+            train_objectives=[(train_dataloader, train_loss)],
+            evaluator=evaluator,
+            warmup_steps=warmup_steps,
+            scheduler=scheduler,
+            optimizer_params={"lr": learning_rate},
+            save_best_model=True,
+            epochs=num_epochs,
+            output_path=MODEL_SAVE_PATH,
+        )
 
-    # Reload the best model
-    model = SentenceTransformer(MODEL_SAVE_PATH)
+        # Reload the best model
+        model = SentenceTransformer(MODEL_SAVE_PATH)
+    else:
+        print("Skipping training")
 
     # Score and evaluate the model
     predictions, test_labels = score_prediction(
@@ -226,17 +233,22 @@ def objective(
     eval_results["freeze_embedding_model"] = freeze_embedding_model
     eval_results["batch_size"] = batch_size
     eval_results["num_epochs"] = num_epochs
+    eval_results["train"] = config.train
 
     print(json.dumps(eval_results, indent=2))
 
     journal_file_name.parent.mkdir(parents=True, exist_ok=True)
     with open(journal_file_name, "w") as f:
         json.dump(eval_results, f)
+        VOLUME.commit()
 
     return eval_results
 
 
 def generate_configs():
+    for model in MODELS:
+        yield ModelConfig(model_name=model, dataset_size=1_000, train=False)
+
     for (
         model,
         sample_size,
@@ -248,11 +260,6 @@ def generate_configs():
             dataset_size=sample_size,
             freeze_embedding_model=freeze_embedding_model,
             dense_out_features=dense_out_features,
-            learning_rate=1e-4,
-            batch_size=32,
-            warmup_steps=500,
-            scheduler="warmuplinear",
-            num_epochs=8,
         )
 
 
@@ -261,5 +268,4 @@ def main():
     results = list(objective.map(generate_configs(), order_outputs=True))
 
     df = pd.DataFrame(results).sort_values("metric_accuracy", ascending=False)
-    date = time.strftime("%Y-%m-%d-%H-%M")
-    df.to_csv(f"./paramsearch/{date}_plain_trial_results.csv", index=False)
+    df.to_csv("./embedding_finetune.csv", index=False)
