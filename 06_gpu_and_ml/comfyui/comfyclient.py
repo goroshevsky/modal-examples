@@ -15,12 +15,12 @@ OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
 
 
 def main(args: argparse.Namespace):
-    url = f"https://{args.modal_workspace}--example-comfyui-comfyui-api{'-dev' if args.dev else ''}.modal.run/"
+    url = f"https://{args.modal_workspace}--comfyui-instantid-comfyui-api{'-dev' if args.dev else ''}.modal.run/"
     data = {
-        "prompt": args.prompt,
-        "input_image_url": "https://raw.githubusercontent.com/comfyanonymous/ComfyUI_examples/master/inpaint/yosemite_inpaint_example.png",
+        "include_text": args.prompt,
+        "input_image": "https://github.com/InstantID/InstantID/blob/main/examples/musk_resize.jpeg?raw=true",
     }
-    print(f"Sending request to {url} with prompt: {data['prompt']}")
+    print(f"Sending request to {url} with prompt: {data['include_text']}")
     print("Waiting for response...")
     start_time = time.time()
     res = requests.post(url, json=data)

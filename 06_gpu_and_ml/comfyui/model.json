@@ -1,10 +1,47 @@
 [
-    {
-        "url": "https://huggingface.co/stabilityai/stable-diffusion-2-inpainting/resolve/main/512-inpainting-ema.ckpt",
-        "path": "models/checkpoints"
-    },
-    {
-        "url": "https://github.com/palant/image-resize-comfyui",
-        "path": "custom_nodes"
-    }
+  {
+    "url": "https://github.com/goroshevsky/ComfyUI-InstantID",
+    "path": "custom_nodes",
+    "filename": null
+  },
+  {
+    "url": "https://huggingface.co/InstantX/InstantID/resolve/main/ip-adapter.bin",
+    "path": "models/ipadapter",
+    "filename": null
+  },
+  {
+    "url": "https://huggingface.co/InstantX/InstantID/resolve/main/ControlNetModel/config.json",
+    "path": "models/controlnet",
+    "filename": null
+  },
+  {
+    "url": "https://huggingface.co/InstantX/InstantID/resolve/main/ControlNetModel/diffusion_pytorch_model.safetensors",
+    "path": "models/controlnet",
+    "filename": null
+  },
+  {
+    "url": "https://f005.backblazeb2.com/file/profuse-public/antelopev2/1k3d68.onnx",
+    "path": "custom_nodes/ComfyUI-InstantID/models/antelopev2",
+    "filename": null
+  },
+  {
+    "url": "https://f005.backblazeb2.com/file/profuse-public/antelopev2/2d106det.onnx",
+    "path": "custom_nodes/ComfyUI-InstantID/models/antelopev2",
+    "filename": null
+  },
+  {
+    "url": "https://f005.backblazeb2.com/file/profuse-public/antelopev2/genderage.onnx",
+    "path": "custom_nodes/ComfyUI-InstantID/models/antelopev2",
+    "filename": null
+  },
+  {
+    "url": "https://f005.backblazeb2.com/file/profuse-public/antelopev2/glintr100.onnx",
+    "path": "custom_nodes/ComfyUI-InstantID/models/antelopev2",
+    "filename": null
+  },
+  {
+    "url": "https://f005.backblazeb2.com/file/profuse-public/antelopev2/scrfd_10g_bnkps.onnx",
+    "path": "custom_nodes/ComfyUI-InstantID/models/antelopev2",
+    "filename": null
+  }
 ]

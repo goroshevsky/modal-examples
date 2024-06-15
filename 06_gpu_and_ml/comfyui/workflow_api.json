@@ -1,7 +1,27 @@
 {
-  "1": {
+  "2": {
     "inputs": {
-      "image": "yosemite_inpaint_example.png",
+      "controlnet_path": "/root/models/controlnet"
+    },
+    "class_type": "IDControlNetLoader",
+    "_meta": {
+      "title": "📷ID ControlNet Loader"
+    }
+  },
+  "4": {
+    "inputs": {
+      "Ipadapter_instantid_path": "/root/models/ipadapter",
+      "filename": "ip-adapter.bin",
+      "pipe": ["17", 0]
+    },
+    "class_type": "Ipadapter_instantidLoader",
+    "_meta": {
+      "title": "📷Ipadapter_instantid Loader"
+    }
+  },
+  "6": {
+    "inputs": {
+      "image": "2 (1).jpg",
       "upload": "image"
     },
     "class_type": "LoadImage",
@@ -9,118 +29,64 @@
       "title": "Load Image"
     }
   },
-  "2": {
-    "inputs": {
-      "ckpt_name": "512-inpainting-ema.ckpt"
-    },
-    "class_type": "CheckpointLoaderSimple",
-    "_meta": {
-      "title": "Load Checkpoint"
-    }
-  },
-  "3": {
-    "inputs": {
-      "text": "closeup photograph of a white heron in the yosemite national park mountains nature",
-      "clip": [
-        "2",
-        1
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "CLIP Text Encode (Prompt)"
-    }
-  },
-  "5": {
-    "inputs": {
-      "text": "watermark, text",
-      "clip": [
-        "2",
-        1
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "CLIP Text Encode (Prompt)"
-    }
-  },
-  "6": {
-    "inputs": {
-      "seed": 366136222179564,
-      "steps": 20,
-      "cfg": 8,
-      "sampler_name": "uni_pc_bh2",
-      "scheduler": "normal",
-      "denoise": 1,
-      "model": [
-        "2",
-        0
-      ],
-      "positive": [
-        "3",
-        0
-      ],
-      "negative": [
-        "5",
-        0
-      ],
-      "latent_image": [
-        "9",
-        0
-      ]
-    },
-    "class_type": "KSampler",
-    "_meta": {
-      "title": "KSampler"
-    }
-  },
-  "7": {
-    "inputs": {
-      "samples": [
-        "6",
-        0
-      ],
-      "vae": [
-        "2",
-        2
-      ]
-    },
-    "class_type": "VAEDecode",
-    "_meta": {
-      "title": "VAE Decode"
-    }
-  },
   "9": {
     "inputs": {
-      "grow_mask_by": 6,
-      "pixels": [
-        "1",
-        0
-      ],
-      "vae": [
-        "2",
-        2
-      ],
-      "mask": [
-        "1",
-        1
-      ]
+      "prompt": "a photo of a happy man looking like Kratos from God Of War game",
+      "negative_prompt": "(lowres, low quality, worst quality:1.2), (text:1.2), watermark, painting, drawing, illustration, glitch, deformed, mutated, cross-eyed, ugly, disfigured (lowres, low quality, worst quality:1.2), (text:1.2), watermark, painting, drawing, illustration, glitch,deformed, mutated, cross-eyed, ugly, disfigured",
+      "style_name": "(No style)"
     },
-    "class_type": "VAEEncodeForInpaint",
+    "class_type": "ID_Prompt_Styler",
     "_meta": {
-      "title": "VAE Encode (for Inpainting)"
+      "title": "📷ID Prompt_Styler"
     }
   },
-  "10": {
+  "11": {
     "inputs": {
-      "images": [
-        "7",
-        0
-      ]
+      "provider": "CUDA"
+    },
+    "class_type": "InsightFaceLoader_Zho",
+    "_meta": {
+      "title": "📷InsightFace Loader"
+    }
+  },
+  "12": {
+    "inputs": {
+      "images": ["15", 0]
     },
     "class_type": "SaveImageWebsocket",
     "_meta": {
       "title": "SaveImageWebsocket"
+    }
+  },
+  "15": {
+    "inputs": {
+      "positive": ["9", 0],
+      "negative": ["9", 1],
+      "ip_adapter_scale": 0.8,
+      "controlnet_conditioning_scale": 0.8,
+      "steps": 30,
+      "guidance_scale": 3,
+      "width": 1024,
+      "height": 1024,
+      "seed": 861938135235630,
+      "face_image": ["6", 0],
+      "pipe": ["4", 0],
+      "insightface": ["11", 0],
+      "enhance_face_region": true
+    },
+    "class_type": "IDGenerationNode",
+    "_meta": {
+      "title": "📷InstantID Generation"
+    }
+  },
+  "17": {
+    "inputs": {
+      "ckpt_name": "albedobaseXL_v21.safetensors",
+      "controlnet": ["2", 0]
+    },
+    "class_type": "IDBaseModelLoader_local",
+    "_meta": {
+      "title": "📷ID Base Model Loader locally"
     }
   }
 }

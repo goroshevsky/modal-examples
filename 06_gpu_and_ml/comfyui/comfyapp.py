@@ -59,34 +59,39 @@ from typing import Dict
 
 import modal
 
-comfyui_commit_sha = "0fecfd2b1a2794b77277c7e256c84de54a63d860"
+comfyui_commit_sha = "71ec5b144ee2c46ee12f1035782d6cb4bc84cca9"
 
 comfyui_image = (  # build up a Modal Image to run ComfyUI, step by step
-    modal.Image.debian_slim(  # start from basic Linux with Python
-        python_version="3.11"
+    modal.Image.from_registry(
+        "nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04", add_python="3.11"
     )
-    .apt_install("git")  # install git to clone ComfyUI
+    .apt_install("git", "libgl1", "libglib2.0-0", "build-essential", "clang")  # install git to clone ComfyUI
     .run_commands(  # install ComfyUI
         "cd /root && git init .",
         "cd /root && git remote add --fetch origin https://github.com/comfyanonymous/ComfyUI",
         f"cd /root && git checkout {comfyui_commit_sha}",
-        "cd /root && pip install xformers!=0.0.18 -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cu121",
+        "cd /root && pip install xformers -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cu121",
     )
-    .pip_install("httpx", "tqdm", "websocket-client")  # add web dependencies
+    .pip_install("httpx", "tqdm", "websocket-client", "fastapi==0.111.0")  # add web dependencies
+    .pip_install("onnxruntime-gpu==1.17.1", extra_index_url="https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/")
     .copy_local_file(  # copy over the ComfyUI model definition JSON and helper Python module
         pathlib.Path(__file__).parent / "model.json", "/root/model.json"
     )
     .copy_local_file(
         pathlib.Path(__file__).parent / "helpers.py", "/root/helpers.py"
     )
+    .copy_local_file(
+        pathlib.Path(__file__).parent / "albedobaseXL_v21.safetensors", "/root/models/checkpoints/albedobaseXL_v21.safetensors"
+    )
 )
 
-app = modal.App(name="example-comfyui")
+app = modal.App(name="comfyui-instantid")
 
 # Some additional code for managing ComfyUI lives in `helpers.py`.
 # This includes functions like downloading checkpoints and plugins to the right directory on the ComfyUI server.
 with comfyui_image.imports():
-    from helpers import connect_to_local_server, download_to_comfyui, get_images
+    from helpers import connect_to_local_server, download_to_comfyui, get_images, get_value
+    import random
 
 
 # ## Running ComfyUI interactively and as an API on Modal
@@ -103,10 +108,11 @@ with comfyui_image.imports():
 # For more on how to run web services on Modal, check out [this guide](https://modal.com/docs/guide/webhooks).
 @app.cls(
     allow_concurrent_inputs=100,
-    gpu="any",
+    gpu="A100",
     image=comfyui_image,
     timeout=1800,
     container_idle_timeout=300,
+    enable_memory_snapshot=True,
     mounts=[
         modal.Mount.from_local_file(
             pathlib.Path(__file__).parent / "workflow_api.json",
@@ -121,10 +127,10 @@ class ComfyUI:
             (pathlib.Path(__file__).parent / "model.json").read_text()
         )
         for m in models:
-            download_to_comfyui(m["url"], m["path"])
+            download_to_comfyui(m["url"], m["path"], m["filename"])
 
     def _run_comfyui_server(self, port=8188):
-        cmd = f"python main.py --dont-print-server --listen --port {port}"
+        cmd = f"python main.py --listen --port {port}"
         subprocess.Popen(cmd, shell=True)
 
     @modal.enter()
@@ -132,22 +138,44 @@ class ComfyUI:
         # runs on a different port as to not conflict with the UI instance
         self._run_comfyui_server(port=8189)
 
-    @modal.web_server(8188, startup_timeout=30)
-    def ui(self):
-        self._run_comfyui_server()
-
     @modal.web_endpoint(method="POST")
     def api(self, item: Dict):
         from fastapi import Response
 
         # download input images to the container
-        download_to_comfyui(item["input_image_url"], "input")
+        download_to_comfyui(item["input_image"], "input")
         workflow_data = json.loads(
             (pathlib.Path(__file__).parent / "workflow_api.json").read_text()
         )
 
-        # insert the prompt
-        workflow_data["3"]["inputs"]["text"] = item["prompt"]
+        prompt_positive = get_value(item, "include_text", "")
+        prompt_negative = get_value(item, "exclude_text", "(lowres, low quality, worst quality:1.2), (text:1.2), watermark, painting, drawing, illustration, glitch, deformed, mutated, cross-eyed, ugly, disfigured (lowres, low quality, worst quality:1.2), (text:1.2), watermark, painting, drawing, illustration, glitch,deformed, mutated, cross-eyed, ugly, disfigured")
+        width = get_value(item, "width", 1024)
+        height = get_value(item, "height", 1024)
+        steps_total = get_value(item, "steps", 30)
+        seed = get_value(item, "seed", random.randint(0,2**32))
+        input_image = get_value(item, "input_image", "")
+        ip_adapter_scale = get_value(item, "ip_adapter_scale", 0.8)
+        controlnet_scale = get_value(item, "controlnet_scale", 0.8)
+        guidance_scale = get_value(item, "guidance_scale", 3)
+        style_name = get_value(item, "style_name", "(No style)")
+        enhance_face_region = get_value(item, "enhance_face", True)
+
+        # set prompt
+        workflow_data["9"]["inputs"]["prompt"] = prompt_positive
+        workflow_data["9"]["inputs"]["negative_prompt"] = prompt_negative
+        workflow_data["9"]["inputs"]["style_name"] = style_name
+
+        workflow_data["15"]["inputs"]["width"] = width
+        workflow_data["15"]["inputs"]["height"] = height
+        workflow_data["15"]["inputs"]["steps"] = steps_total
+        workflow_data["15"]["inputs"]["seed"] = seed
+        workflow_data["15"]["inputs"]["ip_adapter_scale"] = ip_adapter_scale
+        workflow_data["15"]["inputs"]["controlnet_conditioning_scale"] = controlnet_scale
+        workflow_data["15"]["inputs"]["guidance_scale"] = guidance_scale
+        workflow_data["15"]["inputs"]["enhance_face_region"] = enhance_face_region
+
+        workflow_data["6"]["inputs"]["image"] = input_image.split("/")[-1]
 
         # send requests to local headless ComfyUI server (on port 8189)
         server_address = "127.0.0.1:8189"

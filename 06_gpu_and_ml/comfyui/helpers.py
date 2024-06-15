@@ -9,20 +9,23 @@ import subprocess
 import time
 import urllib.request
 import uuid
+from typing import Dict
 
 client_id = str(uuid.uuid4())
 
 
-def download_to_comfyui(url, path):
+def download_to_comfyui(url, path, filename=None):
     import httpx
     from tqdm import tqdm
 
     model_directory = "/root/" + path
     local_filename = url.split("/")[-1]
+    if filename is not None:
+        local_filename = filename
     local_filepath = pathlib.Path(model_directory, local_filename)
     local_filepath.parent.mkdir(parents=True, exist_ok=True)
 
-    print(f"downloading {url} ... to {model_directory}")
+    print(f"downloading {url} ... to {local_filepath}\n")
 
     if path == "custom_nodes":
         download_custom_node(url, model_directory)
@@ -49,7 +52,7 @@ def download_custom_node(url, path):
     repo_name = url.split("/")[-1].split(".")[0]
     repo_path = f"{path}/{repo_name}"
     if os.path.isfile(f"{repo_path}/requirements.txt"):
-        print("Installing custom node requirements...")
+        print("Installing custom node requirements...\n")
         subprocess.run(
             ["pip", "install", "-r", "requirements.txt"], cwd=repo_path
         )
@@ -130,3 +133,11 @@ def convert_workflow_to_python(workflow: str):
             return pathlib.Path("workflow_api.py").read_text()
         except FileNotFoundError:
             print("Error: File workflow_api.py not found.")
+
+def get_value(workflow: Dict, key, default = None):
+        if key not in workflow and default == None:
+            raise IndexError(f"{key} required but not set")
+        elif key not in workflow:
+            return default
+        else:
+            return workflow[key]
