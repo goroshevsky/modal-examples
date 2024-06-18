@@ -82,6 +82,7 @@ vllm_image = (
         "sglang[all]==0.1.16",
         "ninja",
         "packaging",
+        "wheel",
         "transformers==4.40.2",
     )
     .run_commands(  # add FlashAttention for faster inference using a shell command
@@ -126,7 +127,7 @@ class Model:
         self.runtime = sgl.Runtime(
             model_path=MODEL_PATH,
             tokenizer_path=TOKENIZER_PATH,
-            tp_size=GPU_COUNT,  # t_ensor p_arralel size, number of GPUs to split the model over
+            tp_size=GPU_COUNT,  # t_ensor p_arallel size, number of GPUs to split the model over
             log_evel=SGL_LOG_LEVEL,
         )
         self.runtime.endpoint.chat_template = (
@@ -135,7 +136,7 @@ class Model:
         sgl.set_default_backend(self.runtime)
 
     @modal.web_endpoint(method="POST")
-    async def generate(self, image_url: str = None, question: str = None):
+    async def generate(self, request: dict):
         import sglang as sgl
         from term_image.image import from_file
 
@@ -143,8 +144,9 @@ class Model:
         request_id = uuid4()
         print(f"Generating response to request {request_id}")
 
+        image_url = request.get("image_url")
         if image_url is None:
-            image_url = "https://cdn.britannica.com/61/93061-050-99147DCE/Statue-of-Liberty-Island-New-York-Bay.jpg"
+            image_url = "https://modal-public-assets.s3.amazonaws.com/golden-gate-bridge.jpg"
 
         image_filename = image_url.split("/")[-1]
         image_path = f"/tmp/{uuid4()}-{image_filename}"
@@ -160,6 +162,7 @@ class Model:
             s += sgl.user(sgl.image(image_path) + question)
             s += sgl.assistant(sgl.gen("answer"))
 
+        question = request.get("question")
         if question is None:
             question = "What is this?"
 
@@ -212,7 +215,10 @@ def main(image_url=None, question=None, twice=True):
 
     response = requests.post(
         model.generate.web_url,
-        json={"image_url": image_url, "question": question},
+        json={
+            "image_url": image_url,
+            "question": question,
+        },
     )
     assert response.ok, response.status_code
 

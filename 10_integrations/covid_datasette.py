@@ -8,7 +8,7 @@
 #
 # This example shows how to serve a Datasette application on Modal. The published dataset
 # is COVID-19 case data from Johns Hopkins University which is refreshed daily.
-# Try it out for yourself at [modal-labs-example-covid-datasette-app.modal.run/covid-19](https://modal-labs-example-covid-datasette-app.modal.run/covid-19/johns_hopkins_csse_daily_reports).
+# Try it out for yourself at [here](https://modal-labs--example-covid-datasette-ui.modal.run).
 #
 # Some Modal features it uses:
 # * Volumes: a persisted volume lets us store and grow the published dataset over time.
@@ -30,9 +30,7 @@ from urllib.request import urlretrieve
 
 from modal import App, Image, Period, Volume, asgi_app
 
-app = App(
-    "example-covid-datasette"
-)  # Note: prior to April 2024, "app" was called "stub"
+app = App("example-covid-datasette")
 datasette_image = (
     Image.debian_slim()
     .pip_install("datasette~=0.63.2", "sqlite-utils")
